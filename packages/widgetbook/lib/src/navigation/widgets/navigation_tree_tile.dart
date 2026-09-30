@@ -30,6 +30,10 @@ class NavigationTreeTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final borderRadius = BorderRadius.circular(indentation);
+    final colorScheme = WidgetbookTheme.of(context).colorScheme;
+    final foregroundColor = isSelected
+        ? colorScheme.onSecondaryContainer
+        : null;
     final isLeafComponent =
         enableLeafComponents &&
         node is WidgetbookComponent &&
@@ -39,41 +43,45 @@ class NavigationTreeTile extends StatelessWidget {
       height: indentation,
       decoration: BoxDecoration(
         borderRadius: borderRadius,
-        color: isSelected
-            ? WidgetbookTheme.of(context).colorScheme.secondaryContainer
-            : null,
+        color: isSelected ? colorScheme.secondaryContainer : null,
       ),
       child: InkWell(
         onTap: onTap,
         borderRadius: borderRadius,
-        child: Row(
-          children: [
-            SizedBox(
-              width: max(node.depth - 1, 0) * indentation,
+        child: IconTheme.merge(
+          data: IconThemeData(color: foregroundColor),
+          child: DefaultTextStyle.merge(
+            style: TextStyle(color: foregroundColor),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: max(node.depth - 1, 0) * indentation,
+                ),
+                SizedBox(
+                  width: indentation,
+                  child: node.isLeaf || isLeafComponent
+                      ? null
+                      : ExpanderIcon(
+                          isExpanded: isExpanded,
+                        ),
+                ),
+                SizedBox(
+                  width: indentation,
+                  child: resolveIcon(node),
+                ),
+                const SizedBox(
+                  width: 4,
+                ),
+                Expanded(
+                  child: Text(
+                    node.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
             ),
-            SizedBox(
-              width: indentation,
-              child: node.isLeaf || isLeafComponent
-                  ? null
-                  : ExpanderIcon(
-                      isExpanded: isExpanded,
-                    ),
-            ),
-            SizedBox(
-              width: indentation,
-              child: resolveIcon(node),
-            ),
-            const SizedBox(
-              width: 4,
-            ),
-            Expanded(
-              child: Text(
-                node.name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );

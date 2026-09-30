@@ -38,7 +38,7 @@ class DesktopLayout extends StatelessWidget implements BaseLayout {
         state.canShowPanel(LayoutPanel.knobs);
 
     return ColoredBox(
-      color: WidgetbookTheme.of(context).colorScheme.surface,
+      color: WidgetbookTheme.of(context).scaffoldBackgroundColor,
       child: ResizableLayout(
         items: [
           if (showNavigationPanel)
@@ -109,7 +109,7 @@ class ResizableLayout extends StatelessWidget {
 
     return ResizableWidget(
       separatorSize: 2,
-      separatorColor: Colors.white24,
+      separatorColor: WidgetbookTheme.of(context).scaffoldBackgroundColor,
       percentages: items.map((x) => x.percentage + extraPercentage).toList(),
       children: items.map((x) => x.child).toList(),
     );
