@@ -24,6 +24,16 @@ class Workbench extends StatelessWidget {
       return state.home;
     }
 
+    if (useCase.isDocPage) {
+      return Scaffold(
+        backgroundColor: WidgetbookTheme.of(context).scaffoldBackgroundColor,
+        body: UseCaseBuilder(
+          key: ValueKey(state.uri),
+          builder: useCase.build,
+        ),
+      );
+    }
+
     final theme = WidgetbookTheme.of(context);
 
     return Scaffold(

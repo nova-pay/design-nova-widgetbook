@@ -34,9 +34,11 @@ class DesktopLayout extends StatelessWidget implements BaseLayout {
     const kWorkbenchPercentage = 1 - 2 * kSidePanelPercentage;
 
     final showNavigationPanel = state.canShowPanel(LayoutPanel.navigation);
+    final isDocPage = state.useCase?.isDocPage ?? false;
     final showSettingsPanel =
-        state.canShowPanel(LayoutPanel.addons) ||
-        state.canShowPanel(LayoutPanel.knobs);
+        !isDocPage &&
+        (state.canShowPanel(LayoutPanel.addons) ||
+            state.canShowPanel(LayoutPanel.knobs));
 
     final settingsPanel = SettingsPanel(
       settings: [

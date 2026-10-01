@@ -26,6 +26,7 @@ class WidgetbookUseCase extends WidgetbookNode {
     required super.name,
     required this.builder,
     this.designLink,
+    this.isDocPage = false,
   }) : super(
          children: null,
          isInitiallyExpanded: false,
@@ -76,6 +77,14 @@ class WidgetbookUseCase extends WidgetbookNode {
   /// This can be used to link to Figma, Sketch, or other design tool files
   /// that show the expected appearance of this use case.
   final String? designLink;
+
+  /// Whether this use case is a documentation page rather than a widget
+  /// preview.
+  ///
+  /// Documentation pages are rendered with Widgetbook's own theme, without
+  /// the `Widgetbook.appBuilder` and without addons (e.g. no device frame),
+  /// and the knobs/addons panel is hidden while they are shown.
+  final bool isDocPage;
 
   /// Builds the widget for this use case using the provided [context].
   Widget build(BuildContext context) {
