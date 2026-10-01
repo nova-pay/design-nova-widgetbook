@@ -25,6 +25,7 @@ export 'src/knobs/knobs.dart'
         ObjectDropdownKnob,
         ObjectSegmentedKnob,
         StringKnob;
+export 'src/layout/layout_options.dart';
 export 'src/navigation/nodes/nodes.dart';
 export 'src/state/state.dart';
 export 'src/widgetbook.dart';

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import 'addons/addons.dart';
 import 'integrations/integrations.dart';
+import 'layout/layout_options.dart';
 import 'navigation/navigation.dart';
 import 'routing/routing.dart';
 import 'state/default_home_page.dart';
@@ -36,6 +37,7 @@ class Widgetbook extends StatefulWidget {
     this.headerPadding,
     this.scrollBehavior,
     this.enableLeafComponents = true,
+    this.layoutOptions = const WidgetbookLayoutOptions(),
   });
 
   /// A [Widgetbook] with [CupertinoApp] as an [appBuilder].
@@ -54,6 +56,7 @@ class Widgetbook extends StatefulWidget {
     this.headerPadding,
     this.scrollBehavior,
     this.enableLeafComponents = true,
+    this.layoutOptions = const WidgetbookLayoutOptions(),
   });
 
   /// A [Widgetbook] with [MaterialApp] as an [appBuilder].
@@ -72,6 +75,7 @@ class Widgetbook extends StatefulWidget {
     this.headerPadding,
     this.scrollBehavior,
     this.enableLeafComponents = true,
+    this.layoutOptions = const WidgetbookLayoutOptions(),
   });
 
   /// The initial route for that will be used on first startup.
@@ -140,6 +144,10 @@ class Widgetbook extends StatefulWidget {
   /// By default, this is set to true.
   final bool enableLeafComponents;
 
+  /// Options for the shell layout: top bar, navigation panel width and
+  /// which navigation elements are shown.
+  final WidgetbookLayoutOptions layoutOptions;
+
   @override
   State<Widgetbook> createState() => _WidgetbookState();
 }
@@ -160,6 +168,7 @@ class _WidgetbookState extends State<Widgetbook> {
       addons: widget.addons,
       integrations: widget.integrations,
       enableLeafComponents: widget.enableLeafComponents,
+      layoutOptions: widget.layoutOptions,
       root: WidgetbookRoot(
         children: widget.directories,
       ),

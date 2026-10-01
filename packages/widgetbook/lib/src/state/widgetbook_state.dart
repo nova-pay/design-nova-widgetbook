@@ -10,6 +10,7 @@ import '../addons/addons.dart';
 import '../fields/fields.dart';
 import '../integrations/widgetbook_integration.dart';
 import '../knobs/knobs.dart';
+import '../layout/layout_options.dart';
 import '../navigation/navigation.dart';
 import '../routing/routing.dart';
 import '../utils.dart';
@@ -82,6 +83,7 @@ class WidgetbookState extends ChangeNotifier {
     this.header,
     this.headerPadding,
     this.enableLeafComponents = true,
+    this.layoutOptions = const WidgetbookLayoutOptions(),
   }) {
     this.knobs = KnobsRegistry(
       onLock: () {
@@ -150,6 +152,9 @@ class WidgetbookState extends ChangeNotifier {
   /// Whether leaf components are enabled in the navigation tree.
   /// By default, this is set to true.
   final bool enableLeafComponents;
+
+  /// Options for the shell layout.
+  final WidgetbookLayoutOptions layoutOptions;
 
   /// List of directories passed to the root node.
   List<WidgetbookNode> get directories => root.children!;
@@ -274,8 +279,9 @@ class WidgetbookState extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Updates the `q` query parameter with the given [value].
-  @internal
+  /// Updates the `q` query parameter with the given [value], which filters
+  /// the navigation tree. Public so custom search fields (e.g. in
+  /// [WidgetbookLayoutOptions.topBar]) can drive it.
   void updateQuery(String value) {
     query = value;
     notifyListeners();

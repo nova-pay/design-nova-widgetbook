@@ -18,6 +18,9 @@ class NavigationPanel extends StatefulWidget {
     required this.root,
     this.header,
     this.headerPadding,
+    this.showSearch = true,
+    this.showIcons = true,
+    this.showStatsBanner = true,
   });
 
   final String? initialPath;
@@ -29,6 +32,10 @@ class NavigationPanel extends StatefulWidget {
   final Widget? header;
 
   final EdgeInsetsGeometry? headerPadding;
+
+  final bool showSearch;
+  final bool showIcons;
+  final bool showStatsBanner;
 
   @override
   State<NavigationPanel> createState() => _NavigationPanelState();
@@ -74,26 +81,27 @@ class _NavigationPanelState extends State<NavigationPanel> {
             padding: widget.headerPadding ?? const EdgeInsets.all(16),
             child: widget.header!,
           ),
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: SearchField(
-            value: query,
-            onCleared: () => WidgetbookState.of(context).updateQuery(''),
-            onChanged: (value) {
-              _debounce?.cancel();
-              _debounce = Timer(
-                const Duration(milliseconds: 100),
-                () => WidgetbookState.of(context).updateQuery(value),
-              );
-            },
+        if (widget.showSearch)
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: SearchField(
+              value: query,
+              onCleared: () => WidgetbookState.of(context).updateQuery(''),
+              onChanged: (value) {
+                _debounce?.cancel();
+                _debounce = Timer(
+                  const Duration(milliseconds: 100),
+                  () => WidgetbookState.of(context).updateQuery(value),
+                );
+              },
+            ),
           ),
-        ),
         Expanded(
           child: filteredRoot != null && filteredRoot.children != null
               ? ListView.builder(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                  ),
+                  padding: widget.showSearch
+                      ? const EdgeInsets.symmetric(horizontal: 16)
+                      : const EdgeInsets.all(16),
                   itemCount: filteredRoot.children!.length,
                   itemBuilder: (context, index) => NavigationTreeNode(
                     key: ObjectKey(filteredRoot.children![index]),
@@ -110,17 +118,20 @@ class _NavigationPanelState extends State<NavigationPanel> {
                     enableLeafComponents: WidgetbookState.of(
                       context,
                     ).enableLeafComponents,
+                    showIcons: widget.showIcons,
+                    forceExpanded: query.isNotEmpty,
                   ),
                 )
               : const SizedBox(),
         ),
-        Padding(
-          padding: const EdgeInsets.all(8),
-          child: StatsBanner(
-            componentsCount: WidgetbookState.of(context).root.componentsCount,
-            useCasesCount: WidgetbookState.of(context).root.useCasesCount,
+        if (widget.showStatsBanner)
+          Padding(
+            padding: const EdgeInsets.all(8),
+            child: StatsBanner(
+              componentsCount: WidgetbookState.of(context).root.componentsCount,
+              useCasesCount: WidgetbookState.of(context).root.useCasesCount,
+            ),
           ),
-        ),
       ],
     );
   }

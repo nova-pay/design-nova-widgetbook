@@ -26,6 +26,9 @@ class ResponsiveLayout extends StatelessWidget {
       root: state.root,
       header: state.header,
       headerPadding: state.headerPadding,
+      showSearch: state.layoutOptions.showNavigationSearch,
+      showIcons: state.layoutOptions.showNavigationIcons,
+      showStatsBanner: state.layoutOptions.showStatsBanner,
       onNodeSelected: (node) {
         WidgetbookState.of(context).updatePath(node.path); // Fresh context
 
@@ -69,7 +72,7 @@ class ResponsiveLayout extends StatelessWidget {
     // See: https://m3.material.io/foundations/layout/applying-layout/window-size-classes#2bb70e22-d09b-4b73-9c9f-9ef60311ccc8
     final isMobile = MediaQuery.of(context).size.width < 840;
 
-    return isMobile && !isEmbedded
+    final layout = isMobile && !isEmbedded
         ? MobileLayout(
             navigationBuilder: (context) => buildNavigation(context, true),
             addonsBuilder: buildAddons,
@@ -82,5 +85,19 @@ class ResponsiveLayout extends StatelessWidget {
             knobsBuilder: buildKnobs,
             workbench: child,
           );
+
+    final topBar = WidgetbookState.of(context).layoutOptions.topBar;
+    if (topBar == null) return layout;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Material(
+          type: MaterialType.transparency,
+          child: topBar,
+        ),
+        Expanded(child: layout),
+      ],
+    );
   }
 }

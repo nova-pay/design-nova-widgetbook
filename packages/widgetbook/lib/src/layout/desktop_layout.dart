@@ -28,6 +28,7 @@ class DesktopLayout extends StatelessWidget implements BaseLayout {
   @override
   Widget build(BuildContext context) {
     final state = WidgetbookState.of(context);
+    final theme = WidgetbookTheme.of(context);
 
     const kSidePanelPercentage = 0.2;
     const kWorkbenchPercentage = 1 - 2 * kSidePanelPercentage;
@@ -37,8 +38,68 @@ class DesktopLayout extends StatelessWidget implements BaseLayout {
         state.canShowPanel(LayoutPanel.addons) ||
         state.canShowPanel(LayoutPanel.knobs);
 
+    final settingsPanel = SettingsPanel(
+      settings: [
+        if (state.canShowPanel(LayoutPanel.knobs)) ...{
+          SettingsPanelData(
+            name: 'Knobs',
+            builder: knobsBuilder,
+          ),
+        },
+        if (state.canShowPanel(LayoutPanel.addons) && state.addons != null) ...{
+          SettingsPanelData(
+            name: 'Addons',
+            builder: addonsBuilder,
+          ),
+        },
+      ],
+    );
+
+    final navigationPanelWidth = state.layoutOptions.navigationPanelWidth;
+    if (navigationPanelWidth != null) {
+      final divider = BorderSide(color: theme.dividerColor);
+
+      return ColoredBox(
+        color: theme.scaffoldBackgroundColor,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (showNavigationPanel)
+              Material(
+                color: theme.colorScheme.surface,
+                shape: Border(right: divider),
+                child: SizedBox(
+                  width: navigationPanelWidth,
+                  child: navigationBuilder(context),
+                ),
+              ),
+            Expanded(
+              child: ResizableLayout(
+                separatorColor: theme.dividerColor,
+                separatorSize: 1,
+                items: [
+                  ResizableLayoutItem(
+                    percentage: 0.75,
+                    child: workbench,
+                  ),
+                  if (showSettingsPanel)
+                    ResizableLayoutItem(
+                      percentage: 0.25,
+                      child: Material(
+                        color: theme.colorScheme.surface,
+                        child: settingsPanel,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return ColoredBox(
-      color: WidgetbookTheme.of(context).scaffoldBackgroundColor,
+      color: theme.scaffoldBackgroundColor,
       child: ResizableLayout(
         items: [
           if (showNavigationPanel)
@@ -56,23 +117,7 @@ class DesktopLayout extends StatelessWidget implements BaseLayout {
             ResizableLayoutItem(
               percentage: kSidePanelPercentage,
               child: Card(
-                child: SettingsPanel(
-                  settings: [
-                    if (state.canShowPanel(LayoutPanel.knobs)) ...{
-                      SettingsPanelData(
-                        name: 'Knobs',
-                        builder: knobsBuilder,
-                      ),
-                    },
-                    if (state.canShowPanel(LayoutPanel.addons) &&
-                        state.addons != null) ...{
-                      SettingsPanelData(
-                        name: 'Addons',
-                        builder: addonsBuilder,
-                      ),
-                    },
-                  ],
-                ),
+                child: settingsPanel,
               ),
             ),
         ],
@@ -97,9 +142,18 @@ class ResizableLayoutItem {
 /// Also distributes the remaining space equally among all items.
 @internal
 class ResizableLayout extends StatelessWidget {
-  const ResizableLayout({super.key, required this.items});
+  const ResizableLayout({
+    super.key,
+    required this.items,
+    this.separatorColor,
+    this.separatorSize = 2,
+  });
 
   final List<ResizableLayoutItem> items;
+
+  /// Defaults to the theme's scaffold background color.
+  final Color? separatorColor;
+  final double separatorSize;
 
   @override
   Widget build(BuildContext context) {
@@ -108,8 +162,9 @@ class ResizableLayout extends StatelessWidget {
     final extraPercentage = remainingPercentage / items.length;
 
     return ResizableWidget(
-      separatorSize: 2,
-      separatorColor: WidgetbookTheme.of(context).scaffoldBackgroundColor,
+      separatorSize: separatorSize,
+      separatorColor:
+          separatorColor ?? WidgetbookTheme.of(context).scaffoldBackgroundColor,
       percentages: items.map((x) => x.percentage + extraPercentage).toList(),
       children: items.map((x) => x.child).toList(),
     );
