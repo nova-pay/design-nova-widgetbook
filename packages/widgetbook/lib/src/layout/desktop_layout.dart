@@ -34,9 +34,15 @@ class DesktopLayout extends StatelessWidget implements BaseLayout {
     const kWorkbenchPercentage = 1 - 2 * kSidePanelPercentage;
 
     final showNavigationPanel = state.canShowPanel(LayoutPanel.navigation);
-    final isDocPage = state.useCase?.isDocPage ?? false;
+    // Knobs and addons don't apply to documentation pages. The docs-style
+    // layout (fixed navigation width) also hides them on the home page.
+    final useCase = state.useCase;
+    final navigationPanelWidth = state.layoutOptions.navigationPanelWidth;
+    final hasSettings = useCase == null
+        ? navigationPanelWidth == null
+        : !useCase.isDocPage;
     final showSettingsPanel =
-        !isDocPage &&
+        hasSettings &&
         (state.canShowPanel(LayoutPanel.addons) ||
             state.canShowPanel(LayoutPanel.knobs));
 
@@ -57,7 +63,6 @@ class DesktopLayout extends StatelessWidget implements BaseLayout {
       ],
     );
 
-    final navigationPanelWidth = state.layoutOptions.navigationPanelWidth;
     if (navigationPanelWidth != null) {
       final divider = BorderSide(color: theme.dividerColor);
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:widgetbook/src/navigation/navigation.dart';
+import 'package:widgetbook/src/settings/settings_panel.dart';
 import 'package:widgetbook/widgetbook.dart';
 
 void main() {
@@ -81,9 +82,7 @@ void main() {
         );
 
         final topBarDy = tester.getTopLeft(find.text('Top bar')).dy;
-        final navigationDy = tester
-            .getTopLeft(find.byType(NavigationPanel))
-            .dy;
+        final navigationDy = tester.getTopLeft(find.byType(NavigationPanel)).dy;
 
         expect(topBarDy < navigationDy, isTrue);
       },
@@ -153,6 +152,19 @@ void main() {
           tester.widget<NavigationTreeTile>(tile).isSelected,
           isTrue,
         );
+      },
+    );
+
+    testWidgets(
+      'given a navigation panel width and no selected use case, '
+      'then the settings panel is hidden on the home page',
+      (tester) async {
+        await pumpDesktop(
+          tester,
+          options: const WidgetbookLayoutOptions(navigationPanelWidth: 280),
+        );
+
+        expect(find.byType(SettingsPanel), findsNothing);
       },
     );
   });

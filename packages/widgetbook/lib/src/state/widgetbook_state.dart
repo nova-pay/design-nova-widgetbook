@@ -266,9 +266,10 @@ class WidgetbookState extends ChangeNotifier {
     );
   }
 
-  /// Update the [path], causing a new [useCase] to bet returned.
+  /// Update the [path], causing a new [useCase] to be returned.
   /// Resets the [knobs] during the update.
-  @internal
+  ///
+  /// Public so a custom [home] can link to use cases.
   void updatePath(String newPath) {
     path = newPath;
 
