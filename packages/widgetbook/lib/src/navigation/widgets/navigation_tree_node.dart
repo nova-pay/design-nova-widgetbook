@@ -61,11 +61,32 @@ class _NavigationTreeNodeState extends State<NavigationTreeNode> {
 
   @override
   Widget build(BuildContext context) {
-    // Categories are rendered as always-expanded section headers.
-    if (widget.node is WidgetbookCategory) {
-      return _CategorySection(
-        name: widget.node.name,
-        children: widget.node.children?.map(_buildChild).toList() ?? [],
+    // Categories are rendered as always-expanded sections. With a page, the
+    // header is a clickable item that opens it; otherwise it is a label.
+    final node = widget.node;
+    if (node is WidgetbookCategory) {
+      final page = node.page;
+      final children = node.entries.map(_buildChild).toList();
+
+      if (page == null) {
+        return _CategorySection(name: node.name, children: children);
+      }
+
+      return Padding(
+        padding: const EdgeInsets.only(top: 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            NavigationTreeTile(
+              node: node,
+              isSelected: page.path == widget.selectedNode?.path,
+              enableLeafComponents: widget.enableLeafComponents,
+              showIcon: widget.showIcons,
+              onTap: () => widget.onNodeSelected?.call(page),
+            ),
+            ...children,
+          ],
+        ),
       );
     }
 

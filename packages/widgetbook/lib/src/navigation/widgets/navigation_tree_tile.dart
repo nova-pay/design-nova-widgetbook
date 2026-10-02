@@ -30,10 +30,14 @@ class NavigationTreeTile extends StatelessWidget {
   final bool enableLeafComponents;
   final bool showIcon;
 
-  /// Depth in the tree, ignoring categories: they are rendered as section
-  /// headers, so their children start without indentation.
-  int get _visualDepth =>
-      node.nodesPath.where((n) => !n.isRoot && n is! WidgetbookCategory).length;
+  /// Depth in the tree, ignoring categories without a page: they are
+  /// rendered as labels, so their children start without indentation.
+  /// Categories with a page are items, so their children are indented.
+  int get _visualDepth => node.nodesPath
+      .where(
+        (n) => !n.isRoot && !(n is WidgetbookCategory && n.page == null),
+      )
+      .length;
 
   @override
   Widget build(BuildContext context) {
@@ -80,7 +84,8 @@ class NavigationTreeTile extends StatelessWidget {
                 ),
                 SizedBox(
                   width: indentation,
-                  child: isGroup
+                  // Categories are always expanded, so they have no expander.
+                  child: isGroup && node is! WidgetbookCategory
                       ? ExpanderIcon(
                           isExpanded: isExpanded,
                         )
