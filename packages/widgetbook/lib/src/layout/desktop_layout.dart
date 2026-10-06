@@ -75,15 +75,16 @@ class DesktopLayout extends StatelessWidget implements BaseLayout {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (showNavigationPanel)
-              Material(
-                color: theme.colorScheme.surface,
-                shape: Border(right: divider),
-                child: SizedBox(
-                  width: navigationPanelWidth,
-                  child: navigation,
-                ),
-              ),
+            AnimatedNavigationPanel(
+              width: navigationPanelWidth,
+              child: navigation == null
+                  ? null
+                  : Material(
+                      color: theme.colorScheme.surface,
+                      shape: Border(right: divider),
+                      child: navigation,
+                    ),
+            ),
             Expanded(
               child: ResizableLayout(
                 separatorColor: theme.dividerColor,
@@ -133,6 +134,68 @@ class DesktopLayout extends StatelessWidget implements BaseLayout {
             ),
         ],
       ),
+    );
+  }
+}
+
+/// The fixed-width navigation panel. When [child] appears or goes away
+/// (a custom navigation that hides itself on some pages), the panel slides
+/// open or closed instead of popping, and the workbench follows.
+@internal
+class AnimatedNavigationPanel extends StatefulWidget {
+  const AnimatedNavigationPanel({
+    super.key,
+    required this.width,
+    required this.child,
+  });
+
+  final double width;
+
+  /// Null to close the panel.
+  final Widget? child;
+
+  static const duration = Duration(milliseconds: 300);
+
+  @override
+  State<AnimatedNavigationPanel> createState() =>
+      _AnimatedNavigationPanelState();
+}
+
+class _AnimatedNavigationPanelState extends State<AnimatedNavigationPanel> {
+  /// The last panel shown, kept while it slides closed.
+  Widget? _lastChild;
+
+  @override
+  Widget build(BuildContext context) {
+    final child = widget.child ?? _lastChild;
+    if (widget.child != null) _lastChild = widget.child;
+    final open = widget.child != null;
+    final animate = !(MediaQuery.maybeDisableAnimationsOf(context) ?? false);
+
+    return TweenAnimationBuilder<double>(
+      // Starts at its end value, so a panel that is open on the first page
+      // doesn't slide in.
+      tween: Tween(end: open ? 1 : 0),
+      duration: animate ? AnimatedNavigationPanel.duration : Duration.zero,
+      curve: Curves.easeInOutCubic,
+      onEnd: () {
+        if (!open) setState(() => _lastChild = null);
+      },
+      builder: (context, t, _) {
+        if (child == null || t == 0) return const SizedBox.shrink();
+        return ClipRect(
+          child: SizedBox(
+            width: widget.width * t,
+            child: OverflowBox(
+              // The panel keeps its width and slides in from the left.
+              alignment: Alignment.centerRight,
+              minWidth: widget.width,
+              maxWidth: widget.width,
+              child: Opacity(opacity: t, child: child),
+            ),
+          ),
+        );
+      },
     );
   }
 }

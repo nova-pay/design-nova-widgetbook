@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:widgetbook/src/layout/desktop_layout.dart';
 import 'package:widgetbook/src/navigation/navigation.dart';
 import 'package:widgetbook/src/settings/settings_panel.dart';
 import 'package:widgetbook/widgetbook.dart';
@@ -219,6 +220,64 @@ void main() {
           ),
           findsNothing,
         );
+      },
+    );
+
+    testWidgets(
+      'given a navigation builder that only builds on some pages, '
+      'when navigating to one of them, '
+      'then the panel slides open',
+      (tester) async {
+        await pumpDesktop(
+          tester,
+          options: WidgetbookLayoutOptions(
+            navigationPanelWidth: 280,
+            navigationBuilder: (context) =>
+                (WidgetbookState.of(context).path ?? '').isEmpty
+                ? null
+                : const Text('Custom nav'),
+          ),
+        );
+        expect(find.text('Custom nav'), findsNothing);
+
+        double panelWidth() =>
+            tester.getSize(find.byType(AnimatedNavigationPanel)).width;
+
+        WidgetbookState.of(
+          tester.element(find.byType(AnimatedNavigationPanel)),
+        ).updatePath('components/buttons/button/default');
+        await tester.pump();
+        await tester.pump(AnimatedNavigationPanel.duration ~/ 2);
+
+        // Halfway open, with the nav at its full width.
+        expect(panelWidth(), inExclusiveRange(0, 280));
+        expect(
+          tester
+              .getSize(
+                find.descendant(
+                  of: find.byType(OverflowBox),
+                  matching: find.byType(Opacity),
+                ),
+              )
+              .width,
+          280,
+        );
+
+        await tester.pumpAndSettle();
+        expect(panelWidth(), 280);
+
+        // Closing slides it away too, then removes it.
+        WidgetbookState.of(
+          tester.element(find.byType(AnimatedNavigationPanel)),
+        ).updatePath('');
+        await tester.pump();
+        await tester.pump(AnimatedNavigationPanel.duration ~/ 2);
+        expect(find.text('Custom nav'), findsOneWidget);
+        expect(panelWidth(), inExclusiveRange(0, 280));
+
+        await tester.pumpAndSettle();
+        expect(find.text('Custom nav'), findsNothing);
+        expect(panelWidth(), 0);
       },
     );
   });
