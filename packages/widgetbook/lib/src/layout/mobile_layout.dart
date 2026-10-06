@@ -16,7 +16,7 @@ class MobileLayout extends StatelessWidget implements BaseLayout {
     required this.workbench,
   });
 
-  final Widget Function(BuildContext context) navigationBuilder;
+  final Widget? Function(BuildContext context) navigationBuilder;
   final List<Widget> Function(BuildContext context) addonsBuilder;
   final List<Widget> Function(BuildContext context) knobsBuilder;
   final Widget workbench;
@@ -48,7 +48,7 @@ class MobileLayout extends StatelessWidget implements BaseLayout {
             builder: (context) {
               switch (index) {
                 case 0:
-                  return navigationBuilder(context);
+                  return navigationBuilder(context) ?? const SizedBox();
                 case 1:
                   return MobileSettingsPanel(
                     name: 'Addons',

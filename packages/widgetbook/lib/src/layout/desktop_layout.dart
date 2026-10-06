@@ -20,7 +20,7 @@ class DesktopLayout extends StatelessWidget implements BaseLayout {
     required this.workbench,
   });
 
-  final Widget Function(BuildContext context) navigationBuilder;
+  final Widget? Function(BuildContext context) navigationBuilder;
   final List<Widget> Function(BuildContext context) addonsBuilder;
   final List<Widget> Function(BuildContext context) knobsBuilder;
   final Widget workbench;
@@ -33,7 +33,11 @@ class DesktopLayout extends StatelessWidget implements BaseLayout {
     const kSidePanelPercentage = 0.2;
     const kWorkbenchPercentage = 1 - 2 * kSidePanelPercentage;
 
-    final showNavigationPanel = state.canShowPanel(LayoutPanel.navigation);
+    // A custom navigation may build nothing for some pages (no panel).
+    final navigation = state.canShowPanel(LayoutPanel.navigation)
+        ? navigationBuilder(context)
+        : null;
+    final showNavigationPanel = navigation != null;
     // Knobs and addons don't apply to documentation pages. The docs-style
     // layout (fixed navigation width) also hides them on the home page.
     final useCase = state.useCase;
@@ -77,7 +81,7 @@ class DesktopLayout extends StatelessWidget implements BaseLayout {
                 shape: Border(right: divider),
                 child: SizedBox(
                   width: navigationPanelWidth,
-                  child: navigationBuilder(context),
+                  child: navigation,
                 ),
               ),
             Expanded(
@@ -113,7 +117,7 @@ class DesktopLayout extends StatelessWidget implements BaseLayout {
             ResizableLayoutItem(
               percentage: kSidePanelPercentage,
               child: Card(
-                child: navigationBuilder(context),
+                child: navigation,
               ),
             ),
           ResizableLayoutItem(

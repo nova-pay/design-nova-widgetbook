@@ -11,6 +11,7 @@ class WidgetbookLayoutOptions {
     this.showNavigationSearch = true,
     this.showNavigationIcons = true,
     this.showStatsBanner = true,
+    this.navigationBuilder,
   });
 
   /// An optional full-width bar shown above all panels.
@@ -35,4 +36,14 @@ class WidgetbookLayoutOptions {
   /// Whether the components/use-cases counter is shown at the bottom of the
   /// navigation panel.
   final bool showStatsBanner;
+
+  /// Replaces the built-in navigation tree with a custom widget.
+  ///
+  /// It is built below the `WidgetbookScope`: read the tree and the current
+  /// path from `WidgetbookState.of(context)` and navigate with
+  /// `updatePath`. When set, [showNavigationSearch], [showNavigationIcons]
+  /// and [showStatsBanner] have no effect.
+  ///
+  /// Return null to hide the navigation panel on the current page.
+  final Widget? Function(BuildContext context)? navigationBuilder;
 }

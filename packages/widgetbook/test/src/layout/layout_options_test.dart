@@ -167,5 +167,59 @@ void main() {
         expect(find.byType(SettingsPanel), findsNothing);
       },
     );
+
+    testWidgets(
+      'given a navigation builder, '
+      'then it replaces the navigation tree and can navigate',
+      (tester) async {
+        await pumpDesktop(
+          tester,
+          options: WidgetbookLayoutOptions(
+            navigationPanelWidth: 280,
+            navigationBuilder: (context) => TextButton(
+              onPressed: () => WidgetbookState.of(
+                context,
+              ).updatePath('components/buttons/button/disabled'),
+              child: const Text('Custom nav'),
+            ),
+          ),
+        );
+
+        expect(find.text('Custom nav'), findsOneWidget);
+        expect(find.byType(NavigationPanel), findsNothing);
+
+        await tester.tap(find.text('Custom nav'));
+        await tester.pumpAndSettle();
+
+        expect(
+          WidgetbookState.of(
+            tester.element(find.text('Custom nav')),
+          ).path,
+          'components/buttons/button/disabled',
+        );
+      },
+    );
+
+    testWidgets(
+      'given a navigation builder that returns null, '
+      'then no navigation panel is shown',
+      (tester) async {
+        await pumpDesktop(
+          tester,
+          options: WidgetbookLayoutOptions(
+            navigationPanelWidth: 280,
+            navigationBuilder: (_) => null,
+          ),
+        );
+
+        expect(find.byType(NavigationPanel), findsNothing);
+        expect(
+          find.byWidgetPredicate(
+            (w) => w is SizedBox && w.width == 280,
+          ),
+          findsNothing,
+        );
+      },
+    );
   });
 }

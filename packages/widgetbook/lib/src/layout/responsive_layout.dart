@@ -18,8 +18,11 @@ class ResponsiveLayout extends StatelessWidget {
 
   final Widget child;
 
-  Widget buildNavigation(BuildContext context, bool isMobile) {
+  Widget? buildNavigation(BuildContext context, bool isMobile) {
     final state = WidgetbookState.of(context);
+
+    final customNavigation = state.layoutOptions.navigationBuilder;
+    if (customNavigation != null) return customNavigation(context);
 
     return NavigationPanel(
       initialPath: state.path,

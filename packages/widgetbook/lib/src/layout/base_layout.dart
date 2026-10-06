@@ -11,7 +11,7 @@ abstract class BaseLayout {
     required this.workbench,
   });
 
-  final Widget Function(BuildContext context) navigationBuilder;
+  final Widget? Function(BuildContext context) navigationBuilder;
   final List<Widget> Function(BuildContext context) addonsBuilder;
   final List<Widget> Function(BuildContext context) knobsBuilder;
   final Widget workbench;
