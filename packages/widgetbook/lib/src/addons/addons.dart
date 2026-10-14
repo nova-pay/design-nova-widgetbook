@@ -1,5 +1,6 @@
 export 'accessibility_addon/addon.dart';
 export 'alignment_addon/addon.dart';
+export 'analytics_addon/addon.dart';
 export 'builder_addon/addon.dart';
 export 'common/common.dart';
 export 'device_frame_addon/addon.dart';
