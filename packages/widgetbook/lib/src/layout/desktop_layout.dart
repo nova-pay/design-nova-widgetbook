@@ -7,6 +7,10 @@ import '../state/state.dart';
 import '../widgetbook_theme.dart';
 import 'base_layout.dart';
 
+/// The narrowest the knobs and addons panel gets beside a fixed-width
+/// navigation panel, as long as it takes at most half the space.
+const kSettingsPanelMinWidth = 280.0;
+
 /// The [DesktopLayout] is a layout for desktop devices that allows
 /// displaying the navigation, addons, knobs, and workbench in a
 /// resizable layout.
@@ -86,23 +90,34 @@ class DesktopLayout extends StatelessWidget implements BaseLayout {
                     ),
             ),
             Expanded(
-              child: ResizableLayout(
-                separatorColor: theme.dividerColor,
-                separatorSize: 1,
-                items: [
-                  ResizableLayoutItem(
-                    percentage: 0.75,
-                    child: workbench,
-                  ),
-                  if (showSettingsPanel)
-                    ResizableLayoutItem(
-                      percentage: 0.25,
-                      child: Material(
-                        color: theme.colorScheme.surface,
-                        child: settingsPanel,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  // A quarter of the space, but wide enough for knob
+                  // fields on narrower windows (up to half the space).
+                  final settingsShare =
+                      (kSettingsPanelMinWidth / constraints.maxWidth).clamp(
+                        0.25,
+                        0.5,
+                      );
+                  return ResizableLayout(
+                    separatorColor: theme.dividerColor,
+                    separatorSize: 1,
+                    items: [
+                      ResizableLayoutItem(
+                        percentage: showSettingsPanel ? 1 - settingsShare : 1,
+                        child: workbench,
                       ),
-                    ),
-                ],
+                      if (showSettingsPanel)
+                        ResizableLayoutItem(
+                          percentage: settingsShare,
+                          child: Material(
+                            color: theme.colorScheme.surface,
+                            child: settingsPanel,
+                          ),
+                        ),
+                    ],
+                  );
+                },
               ),
             ),
           ],

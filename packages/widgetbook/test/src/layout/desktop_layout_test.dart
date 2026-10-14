@@ -9,6 +9,44 @@ void main() {
   group(
     '$DesktopLayout',
     () {
+      for (final (width, expected) in [(1600.0, 325.0), (900.0, 280.0)]) {
+        testWidgets(
+          'given a fixed-width navigation panel on a ${width.round()}px '
+          'window, then the settings panel is ${expected.round()}px wide',
+          (tester) async {
+            tester.view.physicalSize = Size(width, 800);
+            tester.view.devicePixelRatio = 1.0;
+            addTearDown(tester.view.resetPhysicalSize);
+
+            await tester.pumpWidget(
+              Widgetbook.material(
+                initialRoute: '/?path=widget/default',
+                layoutOptions: const WidgetbookLayoutOptions(
+                  navigationPanelWidth: 300,
+                ),
+                directories: [
+                  WidgetbookComponent(
+                    name: 'Widget',
+                    useCases: [
+                      WidgetbookUseCase(
+                        name: 'Default',
+                        builder: (_) => const SizedBox(),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+            await tester.pumpAndSettle();
+
+            expect(
+              tester.getSize(find.byType(SettingsPanel)).width,
+              closeTo(expected, 2),
+            );
+          },
+        );
+      }
+
       testWidgets(
         'given an empty panels query parameter, '
         'then navigation and settings panels are not displayed',
