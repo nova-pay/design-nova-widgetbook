@@ -9,6 +9,55 @@ void main() {
   group(
     '$DesktopLayout',
     () {
+      testWidgets(
+        'given a fixed-width navigation panel, '
+        'when moving from a docs page to a use case, '
+        'then the settings panel is shown',
+        (tester) async {
+          tester.view.physicalSize = const Size(1600, 800);
+          tester.view.devicePixelRatio = 1.0;
+          addTearDown(tester.view.resetPhysicalSize);
+
+          await tester.pumpWidget(
+            Widgetbook.material(
+              initialRoute: '/?path=guide',
+              layoutOptions: const WidgetbookLayoutOptions(
+                navigationPanelWidth: 300,
+              ),
+              directories: [
+                WidgetbookUseCase(
+                  name: 'Guide',
+                  isDocPage: true,
+                  builder: (_) => const Text('Guide'),
+                ),
+                WidgetbookComponent(
+                  name: 'Widget',
+                  useCases: [
+                    WidgetbookUseCase(
+                      name: 'Default',
+                      builder: (_) => const Text('Use case'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          );
+          await tester.pumpAndSettle();
+          expect(find.byType(SettingsPanel), findsNothing);
+
+          WidgetbookState.of(
+            tester.element(find.text('Guide').first),
+          ).updatePath('widget/default');
+          await tester.pumpAndSettle();
+
+          expect(find.text('Use case'), findsOneWidget);
+          expect(
+            tester.getSize(find.byType(SettingsPanel)).width,
+            closeTo(325, 2),
+          );
+        },
+      );
+
       for (final (width, expected) in [(1600.0, 325.0), (900.0, 280.0)]) {
         testWidgets(
           'given a fixed-width navigation panel on a ${width.round()}px '

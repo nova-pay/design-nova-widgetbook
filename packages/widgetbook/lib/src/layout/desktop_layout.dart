@@ -251,6 +251,9 @@ class ResizableLayout extends StatelessWidget {
     final extraPercentage = remainingPercentage / items.length;
 
     return ResizableWidget(
+      // ResizableWidget sets its children up once, so a panel added later
+      // (e.g. the settings panel when leaving a docs page) would never show.
+      key: ValueKey(items.length),
       separatorSize: separatorSize,
       separatorColor:
           separatorColor ?? WidgetbookTheme.of(context).scaffoldBackgroundColor,
