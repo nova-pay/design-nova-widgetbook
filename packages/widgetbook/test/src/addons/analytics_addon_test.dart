@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:widgetbook/widgetbook.dart';
@@ -286,14 +287,123 @@ void main() {
         },
       );
 
+      Future<GlobalKey> pumpCrowded(WidgetTester tester) async {
+        final rowKey = GlobalKey();
+        final addon = AnalyticsAddon(
+          resolve: (_) => [
+            for (var i = 0; i < 16; i++)
+              AnalyticsMarker(
+                id: '$i',
+                title: 'event $i',
+                properties: const {'a': '1', 'b': '2'},
+                target: rowKey.currentContext as Element?,
+              ),
+          ],
+        );
+        tester.view.physicalSize = const Size(1600, 700);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+
+        await tester.pumpWidgetWithQueryParams(
+          queryParams: {'analytics': '{enabled:true}'},
+          builder: (context) => addon.buildUseCase(
+            context,
+            Align(
+              alignment: Alignment.bottomRight,
+              child: SizedBox(key: rowKey, width: 200, height: 40),
+            ),
+            true,
+          ),
+        );
+        await rescan(tester);
+        return rowKey;
+      }
+
+      Rect cardOf(WidgetTester tester, int i) => tester.getRect(
+        find
+            .ancestor(
+              of: find.text('event $i'),
+              matching: find.byType(AnimatedContainer),
+            )
+            .first,
+      );
+
+      Future<void> wheel(WidgetTester tester, Offset at, double dy) async {
+        final pointer = TestPointer(1, PointerDeviceKind.mouse);
+        await tester.sendEventToBinding(pointer.hover(at));
+        await tester.sendEventToBinding(pointer.scroll(Offset(0, dy)));
+        await tester.pump();
+      }
+
       testWidgets(
-        'given more cards than fit on one side, '
-        'then they spill to the other side and leave the toggle clear',
+        'given more cards than fit, '
+        'then both columns fill up and say how many cards are below',
+        (tester) async {
+          await pumpCrowded(tester);
+
+          final cards = [for (var i = 0; i < 16; i++) cardOf(tester, i)];
+          expect(cards.any((card) => card.left == 16), isTrue);
+          expect(cards.any((card) => card.left > 800), isTrue);
+          expect(find.textContaining('more'), findsWidgets);
+        },
+      );
+
+      testWidgets(
+        'when the wheel turns over an overflowing column, '
+        'then that column scrolls to the cards below',
+        (tester) async {
+          await pumpCrowded(tester);
+          final last = cardOf(tester, 15);
+          final column = last.left == 16 ? 100.0 : 1500.0;
+
+          await wheel(tester, Offset(column, 300), 10000);
+
+          final scrolled = cardOf(tester, 15);
+          expect(scrolled.top, lessThan(last.top));
+          expect(
+            scrolled.overlaps(tester.getRect(find.text('Analytics'))),
+            isFalse,
+          );
+          expect(scrolled.bottom, lessThanOrEqualTo(700));
+        },
+      );
+
+      testWidgets(
+        'when the wheel turns over the middle, '
+        'then the cards stay put',
+        (tester) async {
+          await pumpCrowded(tester);
+          final before = cardOf(tester, 15);
+
+          await wheel(tester, const Offset(800, 300), 10000);
+
+          expect(cardOf(tester, 15), before);
+        },
+      );
+
+      testWidgets(
+        'when a "more" chip is tapped, '
+        'then its column scrolls towards the hidden cards',
+        (tester) async {
+          await pumpCrowded(tester);
+          final before = [for (var i = 0; i < 16; i++) cardOf(tester, i)];
+
+          await tester.tap(find.textContaining('more').first);
+          await tester.pump();
+
+          final after = [for (var i = 0; i < 16; i++) cardOf(tester, i)];
+          expect(after, isNot(before));
+        },
+      );
+
+      testWidgets(
+        'given cards whose targets are low on the screen, '
+        'then they stack upwards and stay visible',
         (tester) async {
           final rowKey = GlobalKey();
           final addon = AnalyticsAddon(
             resolve: (_) => [
-              for (var i = 0; i < 8; i++)
+              for (var i = 0; i < 5; i++)
                 AnalyticsMarker(
                   id: '$i',
                   title: 'event $i',
@@ -319,20 +429,13 @@ void main() {
           );
           await rescan(tester);
 
-          Rect cardOf(int i) => tester.getRect(
-            find
-                .ancestor(
-                  of: find.text('event $i'),
-                  matching: find.byType(AnimatedContainer),
-                )
-                .first,
-          );
           final toggle = tester.getRect(find.text('Analytics'));
-          final cards = [for (var i = 0; i < 8; i++) cardOf(i)];
-
-          expect(cards.any((card) => card.left == 16), isTrue);
-          expect(cards.any((card) => card.left > 800), isTrue);
-          expect(cards.where((card) => card.overlaps(toggle)), isEmpty);
+          for (var i = 0; i < 5; i++) {
+            final card = cardOf(tester, i);
+            expect(card.top, greaterThanOrEqualTo(16));
+            expect(card.bottom, lessThanOrEqualTo(toggle.top));
+          }
+          expect(find.textContaining('more'), findsNothing);
         },
       );
     },

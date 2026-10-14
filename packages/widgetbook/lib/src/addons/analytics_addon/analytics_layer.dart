@@ -207,6 +207,10 @@ abstract final class _Card {
   /// Room left free under the right column for the toggle.
   static const toggleRoom = 56.0;
 
+  /// Where a column must end to stay visible.
+  static double limitOf(Size area, {required bool right}) =>
+      area.height - margin - (right ? toggleRoom : 0);
+
   static int rowsOf(AnalyticsMarker marker) {
     final count = marker.properties.length;
     return count > maxRows ? maxRows : count;
@@ -239,6 +243,28 @@ class _AnalyticsSceneState extends State<_AnalyticsScene> {
   final _dragged = <String, Offset>{};
   String? _hovered;
 
+  /// How far each column (`true` for the right one) is scrolled, and how far
+  /// it can be, from the last layout.
+  final _scrolled = {false: 0.0, true: 0.0};
+  final _maxScroll = {false: 0.0, true: 0.0};
+
+  void _scrollBy({required bool right, required double delta}) {
+    setState(() {
+      _scrolled[right] = (_scrolled[right]! + delta).clamp(
+        0.0,
+        _maxScroll[right]!,
+      );
+    });
+  }
+
+  /// Whether a point of the workbench is over a column's gutter.
+  bool? _columnAt(Offset position, Size area) {
+    const reach = _Card.margin * 2 + _Card.width;
+    if (position.dx <= reach) return false;
+    if (position.dx >= area.width - reach) return true;
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder<_Scene>(
@@ -247,9 +273,33 @@ class _AnalyticsSceneState extends State<_AnalyticsScene> {
         final area = scene.area;
         if (area == null) return const SizedBox.shrink();
 
-        final cards = scene.enabled
+        final laidOut = scene.enabled
             ? _layout(scene.markers, area)
-            : const <_LaidOut>[];
+            : (
+                cards: const <_LaidOut>[],
+                bottoms: const {false: 0.0, true: 0.0},
+              );
+        for (final right in [false, true]) {
+          _maxScroll[right] = math.max(
+            0,
+            laidOut.bottoms[right]! - _Card.limitOf(area.size, right: right),
+          );
+          _scrolled[right] = _scrolled[right]!.clamp(0.0, _maxScroll[right]!);
+        }
+        final cards = [
+          for (final card in laidOut.cards)
+            card.shifted(Offset(0, -_scrolled[card.right]!)),
+        ];
+        int hidden({required bool right, required bool above}) => cards
+            .where(
+              (card) =>
+                  card.right == right &&
+                  (above
+                      ? card.rect.top < _Card.margin - 1
+                      : card.rect.bottom >
+                            _Card.limitOf(area.size, right: right) + 1),
+            )
+            .length;
 
         // Overlay entries have no Material above them, so text would fall
         // back to the debug style.
@@ -260,51 +310,102 @@ class _AnalyticsSceneState extends State<_AnalyticsScene> {
               Positioned.fromRect(
                 rect: area,
                 child: ClipRect(
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      IgnorePointer(
-                        child: CustomPaint(
-                          size: area.size,
-                          painter: _ConnectorPainter(
-                            cards: cards,
-                            hovered: _hovered,
-                            fallbackColor: widget.color,
+                  // Translucent, so taps and drags still reach the use case.
+                  // The wheel is only taken over a column that overflows.
+                  child: Listener(
+                    behavior: HitTestBehavior.translucent,
+                    onPointerSignal: (event) {
+                      if (event is! PointerScrollEvent) return;
+                      final right = _columnAt(event.localPosition, area.size);
+                      if (right == null || _maxScroll[right]! == 0) return;
+                      GestureBinding.instance.pointerSignalResolver.register(
+                        event,
+                        (_) => _scrollBy(
+                          right: right,
+                          delta: event.scrollDelta.dy,
+                        ),
+                      );
+                    },
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        IgnorePointer(
+                          child: CustomPaint(
+                            size: area.size,
+                            painter: _ConnectorPainter(
+                              cards: cards,
+                              hovered: _hovered,
+                              fallbackColor: widget.color,
+                            ),
                           ),
                         ),
-                      ),
-                      for (final card in cards)
+                        for (final card in cards)
+                          Positioned(
+                            left: card.position.dx,
+                            top: card.position.dy,
+                            child: _MarkerCard(
+                              key: ValueKey(card.marker.id),
+                              marker: card.marker,
+                              color: card.marker.color ?? widget.color,
+                              highlighted: _hovered == card.marker.id,
+                              onHover: (hovering) => setState(
+                                () =>
+                                    _hovered = hovering ? card.marker.id : null,
+                              ),
+                              onDrag: (delta) => setState(
+                                () => _dragged[card.marker.id] =
+                                    (_dragged[card.marker.id] ?? Offset.zero) +
+                                    delta,
+                              ),
+                              onReset: () => setState(
+                                () => _dragged.remove(card.marker.id),
+                              ),
+                            ),
+                          ),
+                        for (final right in [false, true])
+                          for (final above in [true, false])
+                            if (hidden(right: right, above: above)
+                                case final count when count > 0)
+                              Positioned(
+                                left: right
+                                    ? area.width - _Card.margin - _Card.width
+                                    : _Card.margin,
+                                width: _Card.width,
+                                top: above ? 6 : null,
+                                bottom: above
+                                    ? null
+                                    : area.height -
+                                          _Card.limitOf(
+                                            area.size,
+                                            right: right,
+                                          ) -
+                                          6,
+                                child: Center(
+                                  child: _MoreChip(
+                                    count: count,
+                                    above: above,
+                                    color: widget.color,
+                                    onTap: () => _scrollBy(
+                                      right: right,
+                                      delta:
+                                          (above ? -1 : 1) *
+                                          (area.height * 0.6),
+                                    ),
+                                  ),
+                                ),
+                              ),
                         Positioned(
-                          left: card.position.dx,
-                          top: card.position.dy,
-                          child: _MarkerCard(
-                            key: ValueKey(card.marker.id),
-                            marker: card.marker,
-                            color: card.marker.color ?? widget.color,
-                            highlighted: _hovered == card.marker.id,
-                            onHover: (hovering) => setState(
-                              () => _hovered = hovering ? card.marker.id : null,
-                            ),
-                            onDrag: (delta) => setState(
-                              () => _dragged[card.marker.id] =
-                                  (_dragged[card.marker.id] ?? Offset.zero) +
-                                  delta,
-                            ),
-                            onReset: () =>
-                                setState(() => _dragged.remove(card.marker.id)),
+                          right: _Card.margin,
+                          bottom: _Card.margin,
+                          child: _Toggle(
+                            enabled: scene.enabled,
+                            count: scene.markers.length,
+                            color: widget.color,
+                            onTap: widget.onToggle,
                           ),
                         ),
-                      Positioned(
-                        right: _Card.margin,
-                        bottom: _Card.margin,
-                        child: _Toggle(
-                          enabled: scene.enabled,
-                          count: scene.markers.length,
-                          color: widget.color,
-                          onTap: widget.onToggle,
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -316,18 +417,26 @@ class _AnalyticsSceneState extends State<_AnalyticsScene> {
   }
 
   /// Places the cards, in [area] coordinates, in a column at each side of
-  /// the workbench so the use case stays visible. A card goes to the side
-  /// nearer its target, or to the other one when that column is full; cards
-  /// without a target start the left column. Each column is stacked top to
-  /// bottom in target order without overlaps, then the user's drag offsets
-  /// are added.
-  List<_LaidOut> _layout(List<_Placed> placed, Rect area) {
+  /// the workbench so the use case stays visible, then adds the user's drag
+  /// offsets. Also returns where each column ends, to scroll it when it runs
+  /// past the workbench.
+  ///
+  /// Cards go to the side nearer their target while that column has room,
+  /// and to the other side otherwise; cards without a target start the left
+  /// column. In a column each card is level with its target where possible:
+  /// overlapping cards are pushed down, then pulled back up if the column
+  /// runs past its end. A column taller than the workbench is stacked from
+  /// the top and scrolls.
+  ({List<_LaidOut> cards, Map<bool, double> bottoms}) _layout(
+    List<_Placed> placed,
+    Rect area,
+  ) {
     final bounds = Offset.zero & area.size;
     final items =
         [
           for (final item in placed)
             (
-              item: item,
+              marker: item.marker,
               anchor: switch (item.anchor?.shift(-area.topLeft)) {
                 final anchor? when anchor.overlaps(bounds) => anchor,
                 _ => null,
@@ -339,51 +448,73 @@ class _AnalyticsSceneState extends State<_AnalyticsScene> {
           return ay.compareTo(by);
         });
 
-    final cards = <_LaidOut>[];
-    final bottoms = {
-      false: _Card.margin - _Card.gap,
-      true: _Card.margin - _Card.gap,
+    double room(bool right) =>
+        _Card.limitOf(area.size, right: right) - _Card.margin;
+    final columns = {
+      false: <({AnalyticsMarker marker, Rect? anchor})>[],
+      true: <({AnalyticsMarker marker, Rect? anchor})>[],
     };
+    final used = {false: 0.0, true: 0.0};
+    for (final item in items) {
+      final height = _Card.heightOf(item.marker) + _Card.gap;
+      final prefersRight =
+          item.anchor != null && item.anchor!.center.dx > area.width / 2;
+      final right =
+          used[prefersRight]! + height > room(prefersRight) &&
+              used[!prefersRight]! + height <= room(!prefersRight)
+          ? !prefersRight
+          : prefersRight;
+      columns[right]!.add(item);
+      used[right] = used[right]! + height;
+    }
 
-    for (final (:item, :anchor) in items) {
-      final height = _Card.heightOf(item.marker);
-      final prefersRight = anchor != null && anchor.center.dx > area.width / 2;
+    final cards = <_LaidOut>[];
+    final bottoms = {false: _Card.margin, true: _Card.margin};
+    for (final right in [false, true]) {
+      final column = columns[right]!;
+      if (column.isEmpty) continue;
+      final heights = [for (final item in column) _Card.heightOf(item.marker)];
+      final limit = _Card.limitOf(area.size, right: right);
 
-      // Where the card would go in a column: level with its target, below
-      // the cards above it, and lifted to end before the column's bottom if
-      // there is room. Null if it does not fit.
-      double? slotIn({required bool right}) {
-        final top = bottoms[right]! + _Card.gap;
-        final limit =
-            area.height - _Card.margin - (right ? _Card.toggleRoom : 0);
-        final wanted = anchor == null ? top : anchor.center.dy - height / 2;
-        final y = math.max(top, math.min(wanted, limit - height));
-        return y + height <= limit ? y : null;
+      // Level with the targets, pushed down where they would overlap.
+      final tops = <double>[];
+      for (var i = 0; i < column.length; i++) {
+        final anchor = column[i].anchor;
+        final wanted = anchor == null
+            ? _Card.margin
+            : anchor.center.dy - heights[i] / 2;
+        final below = i == 0 ? _Card.margin : tops[i - 1] + heights[i - 1];
+        tops.add(math.max(wanted, i == 0 ? below : below + _Card.gap));
+      }
+      // Pulled back up from the end, but never above the top margin.
+      for (var i = column.length - 1; i >= 0; i--) {
+        final end = i == column.length - 1 ? limit : tops[i + 1] - _Card.gap;
+        tops[i] = math.max(
+          _Card.margin,
+          math.min(tops[i], end - heights[i]),
+        );
+      }
+      // Too tall for the workbench: stacked from the top, and scrolled.
+      for (var i = 1; i < column.length; i++) {
+        tops[i] = math.max(tops[i], tops[i - 1] + heights[i - 1] + _Card.gap);
       }
 
-      // When neither column has room, the card goes below the left column,
-      // which has no toggle, and can be dragged into view.
-      final preferred = slotIn(right: prefersRight);
-      final other = preferred == null ? slotIn(right: !prefersRight) : null;
-      final right = switch ((preferred, other)) {
-        (_?, _) => prefersRight,
-        (null, _?) => !prefersRight,
-        (null, null) => false,
-      };
-      final y = preferred ?? other ?? bottoms[false]! + _Card.gap;
-      bottoms[right] = y + height;
       final x = right ? area.width - _Card.margin - _Card.width : _Card.margin;
-
-      cards.add(
-        _LaidOut(
-          marker: item.marker,
-          anchor: anchor,
-          position: Offset(x, y) + (_dragged[item.marker.id] ?? Offset.zero),
-          size: Size(_Card.width, height),
-        ),
-      );
+      for (var i = 0; i < column.length; i++) {
+        final (:marker, :anchor) = column[i];
+        cards.add(
+          _LaidOut(
+            marker: marker,
+            anchor: anchor,
+            position: Offset(x, tops[i]) + (_dragged[marker.id] ?? Offset.zero),
+            size: Size(_Card.width, heights[i]),
+            right: right,
+          ),
+        );
+      }
+      bottoms[right] = tops.last + heights.last;
     }
-    return cards;
+    return (cards: cards, bottoms: bottoms);
   }
 }
 
@@ -394,6 +525,7 @@ class _LaidOut {
     required this.anchor,
     required this.position,
     required this.size,
+    required this.right,
   });
 
   final AnalyticsMarker marker;
@@ -401,7 +533,18 @@ class _LaidOut {
   final Offset position;
   final Size size;
 
+  /// Whether the card is in the right column.
+  final bool right;
+
   Rect get rect => position & size;
+
+  _LaidOut shifted(Offset offset) => _LaidOut(
+    marker: marker,
+    anchor: anchor,
+    position: position + offset,
+    size: size,
+    right: right,
+  );
 }
 
 class _ConnectorPainter extends CustomPainter {
@@ -619,6 +762,65 @@ class _MarkerCard extends StatelessWidget {
                   ),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Says how many cards are scrolled out of a column; tapping it scrolls
+/// towards them.
+class _MoreChip extends StatelessWidget {
+  const _MoreChip({
+    required this.count,
+    required this.above,
+    required this.color,
+    required this.onTap,
+  });
+
+  final int count;
+  final bool above;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(999),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF000000).withValues(alpha: 0.18),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                above ? Icons.arrow_upward : Icons.arrow_downward,
+                size: 14,
+                color: Colors.white,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                '$count more',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+            ],
           ),
         ),
       ),
