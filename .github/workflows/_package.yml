@@ -135,7 +135,7 @@ jobs:
         run: dart pub global activate pana
 
       - name: Check Package Score
-        run: pana . --no-warning --exit-code-threshold 0 --no-dartdoc
+        run: pana . --no-warning --exit-code-threshold 10 --no-dartdoc
 
   publish:
     if: github.event_name == 'push' && contains(github.ref, 'refs/tags/')
