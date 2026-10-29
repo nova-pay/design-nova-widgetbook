@@ -7,3 +7,6 @@ linter:
   rules:
     # Documentation
     public_member_api_docs: true
+analyzer:
+  exclude:
+    - build/**
