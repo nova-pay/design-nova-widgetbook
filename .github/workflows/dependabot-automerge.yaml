@@ -1,0 +1,23 @@
+name: Dependabot auto-merge
+
+# Thin caller for nova-pay/github-workflows reusable-dependabot-automerge.yaml.
+# Auto-approves + auto-merges Dependabot patch/minor bumps (see reusable workflow).
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  automerge:
+    if: github.actor == 'dependabot[bot]'
+    uses: nova-pay/github-workflows/.github/workflows/reusable-dependabot-automerge.yaml@v2
+    # Pass only the two secrets the reusable workflow declares (least-privilege —
+    # NOT `secrets: inherit`, which would expose every org secret to a
+    # pull_request_target workflow). These let the reusable workflow regenerate
+    # stale gqlgen output and commit it back; absent them the regen path no-ops.
+    secrets:
+      APP_ID: ${{ secrets.APP_ID }}
+      APP_PRIVATE_KEY: ${{ secrets.APP_PRIVATE_KEY }}
